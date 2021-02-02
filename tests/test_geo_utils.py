@@ -1,4 +1,4 @@
-from tpl_geocoder import __version__
+from geo_utils import __version__
 
 
 def test_version():

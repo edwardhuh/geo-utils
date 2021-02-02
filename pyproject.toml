@@ -1,15 +1,25 @@
 [tool.poetry]
-name = "tpl-geocoder"
+name = "geo-utils"
 version = "0.1.0"
 description = ""
 authors = ["Edward Huh <edward_huh@brown.edu>"]
+license = "MIT"
+readme = "README.rst"
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.8"
+click = "^7.1.2"
+geopandas = "^0.8.2"
+us = "^2.0.2"
+census = "^0.8.17"
+smartystreets-python-sdk = "^4.7.2"
 
 [tool.poetry.dev-dependencies]
-pytest = "^5.2"
+
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+geo-utils = "geo_utils.cli:cli"
