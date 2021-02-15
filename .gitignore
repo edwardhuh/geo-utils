@@ -1,2 +1,23 @@
+# Editor cruft
+.vscode
+*~
+
+# Mac cruft
+.DS_Store
+
+# Python cruft
+.mypy_cache
+.pytest_cache
+.venv
+__pycache__
+*.pyc
+.ipynb_checkpoints
 .idea/
-dist
+dist/
+
+# Secrets
+.env
+creds.yml
+
+# data
+/data
