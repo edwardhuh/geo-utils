@@ -7,12 +7,11 @@ import aiohttp
 import aiofiles
 
 
-async def abatch(in_queue: asyncio.Queue, out_queue: asyncio.Queue, max_size: int = 50, timeout: float = 1):
+async def batcher(queue: asyncio.Queue, max_size: int = 50, timeout: float = 1):
     batch = []
-    while True:
-        should_submit = False
+    while len(batch) < max_size:
         try:
-            next_val = await asyncio.wait_for(in_queue.get(), timeout=timeout)
+            next_val = await asyncio.wait_for(queue.get(), timeout=timeout)
             batch.append(next_val)
         except asyncio.TimeoutError:
             if not batch:
@@ -21,13 +20,9 @@ async def abatch(in_queue: asyncio.Queue, out_queue: asyncio.Queue, max_size: in
                 await asyncio.sleep(0.1)
             else:
                 # Queue is empty and we have stuff so go ahead and submit
-                should_submit = True
+                return batch
 
-        if should_submit or len(batch) >= max_size:
-            await out_queue.put(batch)
-            for _ in range(len(batch)):
-                in_queue.task_done()
-            batch = []
+    return batch
 
 
 async def abatch_geocoder(in_queue: asyncio.Queue, success_queue: asyncio.Queue, failure_queue: asyncio.Queue, max_retries: int = 3):
@@ -35,7 +30,7 @@ async def abatch_geocoder(in_queue: asyncio.Queue, success_queue: asyncio.Queue,
     async with aiohttp.ClientSession() as session:
         while True:
             # Get a batch from the input queue
-            batch = await in_queue.get()
+            batch = await batcher(in_queue)
 
             # Prep it for this particular geocoder
             prepped_batch = prep_batch(batch)
@@ -107,23 +102,16 @@ async def pipeline(input_filename: str, output_filename: str):
 
     # Setup first geocoder and hook it up to a batcher
     first_geocoder_queue = asyncio.Queue()
-    second_geocoder_batch_queue = asyncio.Queue()
-    batcher = asyncio.create_task(abatch(source_queue, first_geocoder_queue))
-    first_geocoder = asyncio.create_task(abatch_geocoder(first_geocoder_queue, sink_queue, second_geocoder_batch_queue))
+    second_geocoder_queue = asyncio.Queue()
+    first_geocoder = asyncio.create_task(abatch_geocoder(first_geocoder_queue, sink_queue, second_geocoder_queue))
 
-    tasks.append(batcher)
     tasks.append(first_geocoder)
     queues.append(first_geocoder_queue)
-    queues.append(second_geocoder_batch_queue)
+    queues.append(second_geocoder_queue)
 
     # Setup second (and here, last) geocoder
-    second_geocoder_in_queue = asyncio.Queue()
-    batcher = asyncio.create_task(abatch(second_geocoder_batch_queue, second_geocoder_in_queue))
-    second_geocoder = asyncio.create_task(abatch_geocoder(second_geocoder_in_queue, sink_queue, sink_queue))
-
-    tasks.append(batcher)
+    second_geocoder = asyncio.create_task(abatch_geocoder(second_geocoder_queue, sink_queue, sink_queue))
     tasks.append(second_geocoder)
-    queues.append(second_geocoder_in_queue)
 
     # Explicitly await the reader, which returns when the file is read
     await reader
