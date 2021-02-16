@@ -13,6 +13,8 @@ geopandas = "^0.8.2"
 us = "^2.0.2"
 census = "^0.8.17"
 smartystreets-python-sdk = "^4.7.2"
+aiohttp = "^3.7.3"
+aiofiles = "^0.6.0"
 
 [tool.poetry.dev-dependencies]
 black = "^20.8b1"
